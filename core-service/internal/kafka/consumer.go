@@ -72,10 +72,10 @@ func (c *Consumer) Get(ctx context.Context) {
 			fetches := c.client.PollFetches(ctx)
 			if errs := fetches.Errors(); len(errs) > 0 {
 				c.logger.Error("Error polling fetches", "error", errs)
+				continue
 			}
 
 			iter := fetches.RecordIter()
-			c.logger.Info("Consumer is getting data")
 			for !iter.Done() {
 				record := iter.Next()
 				recordChan <- record.Value

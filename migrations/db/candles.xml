@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
+
+    <changeSet id="2025-08-08-candles-table-init" author="Point74">
+        <preConditions>
+            <not>
+                <tableExists tableName="candles"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="candles" remarks="Таблица для хранения свечей">
+            <column name="id" type="SERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="ticker" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="high" type="DOUBLE PRECISION">
+                <constraints nullable="false"/>
+            </column>
+            <column name="low" type="DOUBLE PRECISION">
+                <constraints nullable="false"/>
+            </column>
+            <column name="open" type="DOUBLE PRECISION">
+                <constraints nullable="false"/>
+            </column>
+            <column name="close" type="DOUBLE PRECISION">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_trade_ts" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="candles" indexName="candle_ticker_ts_idx">
+            <column name="ticker"/>
+            <column name="last_trade_ts" descending="true"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="candles" indexName="candle_ticker_ts_idx"/>
+            <dropTable tableName="candles"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>
