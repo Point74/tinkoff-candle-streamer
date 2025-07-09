@@ -2,9 +2,10 @@ package api
 
 import (
 	"api-connection-service/internal/config"
+	"context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"log"
+	"log/slog"
 )
 
 type tokenAuth struct {
@@ -22,24 +23,31 @@ func (t *tokenAuth) RequireTransportSecurity() bool {
 }
 
 type Client struct {
-	conn *grpc.ClientConn
+	conn   *grpc.ClientConn
+	logger *slog.Logger
 }
 
-func NewClient(cfg *config.Config) (*Client, error) {
+func NewClient(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 	creds := credentials.NewClientTLSFromCert(nil, "")
 
-	conn, err := grpc.NewClient(cfg.APIHost, grpc.WithTransportCredentials(creds))
+	conn, err := grpc.NewClient(
+		cfg.APIHost,
+		grpc.WithTransportCredentials(creds),
+	)
+
 	if err != nil {
-		log.Printf("Failed to connect gRPC server: %v", err)
+		logger.Error("Failed to connect gRPC server: %v", err)
 		return nil, err
 	}
 
-	return &Client{conn: conn}, nil
+	return &Client{
+		conn:   conn,
+		logger: logger,
+	}, nil
 }
 
 func (c *Client) Close() {
-	if c.conn != nil {
-		_ = c.conn.Close()
+	if err := c.conn.Close(); err != nil {
+		c.logger.Error("Failed to close gRPC connection: %v", err)
 	}
-
 }
