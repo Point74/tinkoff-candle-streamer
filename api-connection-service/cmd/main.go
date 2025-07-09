@@ -3,21 +3,26 @@ package main
 import (
 	"api-connection-service/internal/api"
 	"api-connection-service/internal/config"
-	"log"
+	"api-connection-service/internal/logger"
+	"os"
 )
 
 func main() {
+	log := logger.NewLogger()
+
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatal("Error loading config: ", err)
+		log.Error("Error loading config: ", err)
+		os.Exit(1)
 	}
 
-	client, err := api.NewClient(cfg)
+	client, err := api.NewClient(cfg, log)
 	if err != nil {
-		log.Fatal("Error creating client: ", err)
+		log.Error("Error creating client: ", err)
+		os.Exit(1)
 	}
 
 	defer client.Close()
 
-	log.Printf("API Connection Service started!\n")
+	log.Info("API Connection Service started!\n")
 }
