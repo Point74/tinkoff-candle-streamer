@@ -2,10 +2,11 @@ package api
 
 import (
 	"api-connection-service/internal/config"
+	"api-connection-service/internal/tls"
 	"context"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"log/slog"
+	"time"
 )
 
 type tokenAuth struct {
@@ -28,11 +29,17 @@ type Client struct {
 }
 
 func NewClient(cfg *config.Config, logger *slog.Logger) (*Client, error) {
-	creds := credentials.NewClientTLSFromCert(nil, "")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
-	conn, err := grpc.NewClient(
+	creds, err := tls.LoadTLSCredentials(cfg.TLS, logger)
+
+	conn, err := grpc.DialContext(
+		ctx,
 		cfg.APIHost,
 		grpc.WithTransportCredentials(creds),
+		grpc.WithPerRPCCredentials(&tokenAuth{token: cfg.APIToken}),
+		grpc.WithBlock(),
 	)
 
 	if err != nil {
