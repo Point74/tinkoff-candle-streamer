@@ -2,7 +2,7 @@ package api
 
 import (
 	"api-connection-service/internal/config"
-	"api-connection-service/internal/tls"
+	tlsCred "api-connection-service/internal/tls"
 	"context"
 	"google.golang.org/grpc"
 	"log/slog"
@@ -32,7 +32,7 @@ func NewClient(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	creds, err := tls.LoadTLSCredentials(cfg.TLS, logger)
+	creds, err := tlsCred.LoadTLSCredentials(cfg.TLS, logger)
 
 	conn, err := grpc.DialContext(
 		ctx,
@@ -46,6 +46,9 @@ func NewClient(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 		logger.Error("Failed to connect gRPC server: %v", err)
 		return nil, err
 	}
+
+	state := conn.GetState()
+	logger.Info("gRPC client connection state", "state", state.String())
 
 	return &Client{
 		conn:   conn,

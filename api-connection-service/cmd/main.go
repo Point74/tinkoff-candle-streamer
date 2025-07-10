@@ -12,7 +12,7 @@ func main() {
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Error("Error loading config: ", err)
+		log.Error("Error loading config", err)
 		os.Exit(1)
 	}
 
@@ -24,5 +24,5 @@ func main() {
 
 	defer client.Close()
 
-	log.Info("API Connection Service started!\n")
+	log.Info("API Connection Service started!")
 }
