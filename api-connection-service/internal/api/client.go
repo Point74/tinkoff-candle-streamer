@@ -4,6 +4,7 @@ import (
 	"api-connection-service/internal/config"
 	tlsCred "api-connection-service/internal/tls"
 	"context"
+	"fmt"
 	"google.golang.org/grpc"
 	"log/slog"
 	"time"
@@ -26,6 +27,7 @@ func (t *tokenAuth) RequireTransportSecurity() bool {
 type Client struct {
 	conn   *grpc.ClientConn
 	logger *slog.Logger
+	stream *Stream
 }
 
 func NewClient(cfg *config.Config, logger *slog.Logger) (*Client, error) {
@@ -50,10 +52,25 @@ func NewClient(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 	state := conn.GetState()
 	logger.Info("gRPC client connection state", "state", state.String())
 
+	stream, err := NewStream(conn, logger)
+	if err != nil {
+		logger.Error("Failed to create stream", "error", err)
+		return nil, err
+	}
+
 	return &Client{
 		conn:   conn,
 		logger: logger,
+		stream: stream,
 	}, nil
+}
+
+func (c *Client) StartStream(instrumentID string) error {
+	if c.stream == nil {
+		return fmt.Errorf("stream not initialized")
+	}
+
+	return c.stream.StartStream(instrumentID)
 }
 
 func (c *Client) Close() {
