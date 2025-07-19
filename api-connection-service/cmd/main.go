@@ -25,4 +25,8 @@ func main() {
 	defer client.Close()
 
 	log.Info("API Connection Service started!")
+
+	if err = client.StartStream("BBG004730N88"); err != nil {
+		log.Error("Error starting stream: ", err)
+	}
 }
