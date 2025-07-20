@@ -4,6 +4,7 @@ import (
 	"api-connection-service/internal/api"
 	"api-connection-service/internal/config"
 	"api-connection-service/internal/logger"
+	"context"
 	"os"
 )
 
@@ -24,9 +25,37 @@ func main() {
 
 	defer client.Close()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	log.Info("API Connection Service started!")
 
-	if err = client.StartStream("BBG004730N88"); err != nil {
+	dataChan, errChan, err := client.StartStream(ctx, "BBG004730N88")
+	if err != nil {
 		log.Error("Error starting stream: ", err)
+		os.Exit(1)
+	}
+
+	for true {
+		select {
+		case err, ok := <-errChan:
+			if !ok {
+				log.Info("Error channel closed")
+				return
+			}
+
+			log.Info("Stream error: %v", err)
+
+		case data, ok := <-dataChan:
+			if !ok {
+				log.Info("Data channel closed")
+				return
+			}
+
+			log.Info("Received candle data", "data", data)
+
+		case <-ctx.Done():
+			log.Info("Context done")
+		}
 	}
 }
