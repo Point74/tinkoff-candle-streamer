@@ -5,6 +5,7 @@ import (
 	tlsCred "api-connection-service/internal/tls"
 	"context"
 	"fmt"
+	pb "github.com/Point74/tinkoff-candle-streamer/contracts/gen/doc"
 	"google.golang.org/grpc"
 	"log/slog"
 	"time"
@@ -65,12 +66,14 @@ func NewClient(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) StartStream(instrumentID string) error {
+func (c *Client) StartStream(ctx context.Context, instrumentID string) (chan *pb.MarketDataResponse, chan error, error) {
 	if c.stream == nil {
-		return fmt.Errorf("stream not initialized")
+		return nil, nil, fmt.Errorf("stream not initialized")
 	}
 
-	return c.stream.StartStream(instrumentID)
+	dataChan, errChan := c.stream.StartStream(ctx, instrumentID)
+
+	return dataChan, errChan, nil
 }
 
 func (c *Client) Close() {

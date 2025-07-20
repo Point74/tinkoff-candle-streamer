@@ -6,7 +6,7 @@ import (
 	pb "github.com/Point74/tinkoff-candle-streamer/contracts/gen/doc"
 	"google.golang.org/grpc"
 	"log/slog"
-	"sync"
+	"time"
 )
 
 type Stream struct {
@@ -29,56 +29,88 @@ func NewStream(conn *grpc.ClientConn, logger *slog.Logger) (*Stream, error) {
 	}, nil
 }
 
-func (s *Stream) StartStream(instrumentID string) error {
-	s.logger.Info("starting stream", "instrumentID", instrumentID)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	request := &pb.MarketDataRequest{
-		Payload: &pb.MarketDataRequest_SubscribeCandlesRequest{
-			SubscribeCandlesRequest: &pb.SubscribeCandlesRequest{
-				SubscriptionAction: pb.SubscriptionAction_SUBSCRIPTION_ACTION_SUBSCRIBE,
-				Instruments: []*pb.CandleInstrument{
-					{
-						InstrumentId: instrumentID,
-						Interval:     pb.SubscriptionInterval_SUBSCRIPTION_INTERVAL_ONE_MINUTE,
-					},
-				},
-			},
-		},
-	}
-
-	stream, err := s.client.MarketDataStream(ctx)
-	if err != nil {
-		s.logger.Error("cannot connect to MarketDataService", "error", err)
-		return err
-	}
-
-	if err := stream.Send(request); err != nil {
-		s.logger.Error("cannot send request to MarketDataService", "error", err)
-		return err
-	}
-
-	var wg sync.WaitGroup
-	wg.Add(1)
+func (s *Stream) StartStream(ctx context.Context, instrumentID string) (chan *pb.MarketDataResponse, chan error) {
+	dataChan := make(chan *pb.MarketDataResponse, 100)
+	errChan := make(chan error, 1)
 
 	go func() {
-		defer wg.Done()
+		defer close(dataChan)
+		defer close(errChan)
 
-		for {
-			resp, err := stream.Recv()
-			if err != nil {
-				s.logger.Error("Error receiving stream data", "error", err)
-				cancel()
+		retry := 5 * time.Second
+		maxRetry := 60 * time.Second
+		retryMultiplier := 2.0
+
+		for true {
+			select {
+			case <-ctx.Done():
+				s.logger.Info("Stream stopped")
 				return
-			}
 
-			s.logger.Info("received candle data", "data", resp)
+			default:
+				stream, err := s.client.MarketDataStream(ctx)
+
+				if err != nil {
+					s.logger.Error("cannot connect to MarketDataService", "error", err)
+					errChan <- fmt.Errorf("cannot connect to MarketDataService")
+
+					time.Sleep(retry)
+					retry = time.Duration(float64(retry) * retryMultiplier)
+
+					if retry > maxRetry {
+						retry = maxRetry
+					}
+
+					continue
+				}
+
+				request := &pb.MarketDataRequest{
+					Payload: &pb.MarketDataRequest_SubscribeCandlesRequest{
+						SubscribeCandlesRequest: &pb.SubscribeCandlesRequest{
+							SubscriptionAction: pb.SubscriptionAction_SUBSCRIPTION_ACTION_SUBSCRIBE,
+							Instruments: []*pb.CandleInstrument{
+								{
+									InstrumentId: instrumentID,
+									Interval:     pb.SubscriptionInterval_SUBSCRIPTION_INTERVAL_ONE_MINUTE,
+								},
+							},
+						},
+					},
+				}
+
+				if err := stream.Send(request); err != nil {
+					s.logger.Error("cannot send request to MarketDataService", "error", err)
+					errChan <- fmt.Errorf("cannot send request to MarketDataService")
+
+					time.Sleep(retry)
+					retry = time.Duration(float64(retry) * retryMultiplier)
+
+					if retry > maxRetry {
+						retry = maxRetry
+					}
+
+					continue
+				}
+
+				s.logger.Info("starting stream", "instrumentID", instrumentID)
+
+				for true {
+					resp, err := stream.Recv()
+
+					if err != nil {
+						s.logger.Error("Error receiving stream data", "error", err)
+						errChan <- fmt.Errorf("error receiving stream data")
+
+						return
+					}
+
+					dataChan <- resp
+					s.logger.Info("received candle data", "data", resp)
+				}
+			}
 		}
+
 	}()
 
-	wg.Wait()
-
-	return nil
+	return dataChan, errChan
 }
