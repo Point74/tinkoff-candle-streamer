@@ -2,11 +2,13 @@ package api
 
 import (
 	"api-connection-service/internal/config"
+	"api-connection-service/internal/kafka"
 	tlsCred "api-connection-service/internal/tls"
 	"context"
 	"fmt"
 	pb "github.com/Point74/tinkoff-candle-streamer/contracts/gen/doc"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 	"log/slog"
 	"time"
 )
@@ -66,18 +68,44 @@ func NewClient(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) StartStream(ctx context.Context, instrumentID string) (chan *pb.MarketDataResponse, chan error, error) {
+func (c *Client) StartStream(ctx context.Context, instrumentID string) (chan *pb.Candle, chan error, error) {
 	if c.stream == nil {
 		return nil, nil, fmt.Errorf("stream not initialized")
 	}
 
 	dataChan, errChan := c.stream.StartStream(ctx, instrumentID)
 
+	go c.Serialization(ctx, dataChan)
+
 	return dataChan, errChan, nil
+}
+
+func (c *Client) Serialization(ctx context.Context, dataChan chan *pb.Candle) {
+	for {
+		select {
+		case <-ctx.Done():
+			c.logger.Info("Serialization cancelled")
+			return
+
+		case candle, ok := <-dataChan:
+			if !ok {
+				c.logger.Info("Data channel closed")
+				return
+			}
+
+			data, err := proto.Marshal(candle)
+			if err != nil {
+				c.logger.Error("Failed to serialize candle", "error", err)
+				continue
+			}
+
+			kafka.Send(data)
+		}
+	}
 }
 
 func (c *Client) Close() {
 	if err := c.conn.Close(); err != nil {
-		c.logger.Error("Failed to close gRPC connection: %v", err)
+		c.logger.Error("Failed to close gRPC connection", "error", err)
 	}
 }

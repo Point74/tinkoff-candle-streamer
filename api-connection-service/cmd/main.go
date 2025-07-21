@@ -36,7 +36,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	for true {
+	for {
 		select {
 		case err, ok := <-errChan:
 			if !ok {
