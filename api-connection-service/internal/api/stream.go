@@ -29,8 +29,8 @@ func NewStream(conn *grpc.ClientConn, logger *slog.Logger) (*Stream, error) {
 	}, nil
 }
 
-func (s *Stream) StartStream(ctx context.Context, instrumentID string) (chan *pb.MarketDataResponse, chan error) {
-	dataChan := make(chan *pb.MarketDataResponse, 100)
+func (s *Stream) StartStream(ctx context.Context, instrumentID string) (chan *pb.Candle, chan error) {
+	dataChan := make(chan *pb.Candle, 100)
 	errChan := make(chan error, 1)
 
 	go func() {
@@ -41,7 +41,7 @@ func (s *Stream) StartStream(ctx context.Context, instrumentID string) (chan *pb
 		maxRetry := 60 * time.Second
 		retryMultiplier := 2.0
 
-		for true {
+		for {
 			select {
 			case <-ctx.Done():
 				s.logger.Info("Stream stopped")
@@ -94,18 +94,23 @@ func (s *Stream) StartStream(ctx context.Context, instrumentID string) (chan *pb
 
 				s.logger.Info("starting stream", "instrumentID", instrumentID)
 
-				for true {
+				retry = 5 * time.Second
+
+				for {
 					resp, err := stream.Recv()
 
 					if err != nil {
 						s.logger.Error("Error receiving stream data", "error", err)
 						errChan <- fmt.Errorf("error receiving stream data")
 
-						return
+						break
 					}
 
-					dataChan <- resp
-					s.logger.Info("received candle data", "data", resp)
+					if candle := resp.GetCandle(); candle != nil {
+						dataChan <- candle
+					}
+
+					//dataChan <- resp.GetCandle()
 				}
 			}
 		}
