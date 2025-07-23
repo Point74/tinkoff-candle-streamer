@@ -30,7 +30,12 @@ func main() {
 
 	log.Info("API Connection Service started!")
 
-	dataChan, errChan, err := client.StartStream(ctx, "BBG004730N88")
+	share, err := client.GetInstrumentUIDFromTickerShare(ctx, "T")
+	if err != nil {
+		os.Exit(1)
+	}
+
+	dataChan, errChan, err := client.StartStream(ctx, share)
 	if err != nil {
 		log.Error("Error starting stream: ", err)
 		os.Exit(1)

@@ -28,9 +28,10 @@ func (t *tokenAuth) RequireTransportSecurity() bool {
 }
 
 type Client struct {
-	conn   *grpc.ClientConn
-	logger *slog.Logger
-	stream *Stream
+	conn     *grpc.ClientConn
+	logger   *slog.Logger
+	stream   *Stream
+	producer *kafka.Producer
 }
 
 func NewClient(cfg *config.Config, logger *slog.Logger) (*Client, error) {
@@ -61,11 +62,39 @@ func NewClient(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 		return nil, err
 	}
 
+	producer, err := kafka.NewProducer(cfg.KafkaBroker, logger)
+
 	return &Client{
-		conn:   conn,
-		logger: logger,
-		stream: stream,
+		conn:     conn,
+		logger:   logger,
+		stream:   stream,
+		producer: producer,
 	}, nil
+}
+
+func (c *Client) GetInstrumentUIDFromTickerShare(ctx context.Context, ticker string) (string, error) {
+	classCode := "TQBR"
+
+	instrumentClient := pb.NewInstrumentsServiceClient(c.conn)
+	req := &pb.InstrumentRequest{
+		IdType:    pb.InstrumentIdType_INSTRUMENT_ID_TYPE_TICKER,
+		ClassCode: &classCode,
+		Id:        ticker,
+	}
+
+	resp, err := instrumentClient.GetInstrumentBy(ctx, req)
+	if err != nil {
+		c.logger.Error("Failed to get instrument by ticker", "error", err)
+		return "", err
+	}
+
+	instrument := resp.GetInstrument()
+	if instrument == nil {
+		c.logger.Error("Failed to get instrument_uid by ticker", "error", err)
+		return "", err
+	}
+
+	return instrument.GetUid(), nil
 }
 
 func (c *Client) StartStream(ctx context.Context, instrumentID string) (chan *pb.Candle, chan error, error) {
@@ -99,7 +128,7 @@ func (c *Client) Serialization(ctx context.Context, dataChan chan *pb.Candle) {
 				continue
 			}
 
-			kafka.Send(data)
+			c.producer.Send(ctx, data)
 		}
 	}
 }
@@ -107,5 +136,9 @@ func (c *Client) Serialization(ctx context.Context, dataChan chan *pb.Candle) {
 func (c *Client) Close() {
 	if err := c.conn.Close(); err != nil {
 		c.logger.Error("Failed to close gRPC connection", "error", err)
+	}
+
+	if err := c.producer.Close; err != nil {
+		c.logger.Error("Failed to close kafka producer", "error", err)
 	}
 }

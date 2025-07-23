@@ -21,7 +21,6 @@ func NewProducer(brokers string, logger *slog.Logger) (*Producer, error) {
 
 	opts := []kgo.Opt{
 		kgo.SeedBrokers(brokers),
-		kgo.RequiredAcks(kgo.AllISRAcks()),
 	}
 
 	client, err := kgo.NewClient(opts...)
