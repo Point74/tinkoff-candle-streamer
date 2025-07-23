@@ -5,7 +5,6 @@ type Config struct {
 	APIToken    string
 	TLS         string
 	KafkaBroker string
-	KafkaTopic  string
 }
 
 func LoadConfig() (*Config, error) {
@@ -14,6 +13,5 @@ func LoadConfig() (*Config, error) {
 		APIToken:    "your-api-token",
 		TLS:         "certificate/tinkoff.pem",
 		KafkaBroker: "localhost:9092",
-		KafkaTopic:  "candle_data",
 	}, nil
 }
