@@ -4,6 +4,7 @@ import (
 	"api-connection-service/internal/config"
 	"api-connection-service/internal/kafka"
 	tlsCred "api-connection-service/internal/tls"
+	"api-connection-service/internal/utils"
 	"context"
 	"fmt"
 	pb "github.com/Point74/tinkoff-candle-streamer/contracts/gen/doc"
@@ -97,19 +98,19 @@ func (c *Client) GetInstrumentUIDFromTickerShare(ctx context.Context, ticker str
 	return instrument.GetUid(), nil
 }
 
-func (c *Client) StartStream(ctx context.Context, instrumentID string) (chan *pb.Candle, chan error, error) {
+func (c *Client) StartStream(ctx context.Context, instrumentID string, ticker string) (chan *pb.Candle, chan error, error) {
 	if c.stream == nil {
 		return nil, nil, fmt.Errorf("stream not initialized")
 	}
 
 	dataChan, errChan := c.stream.StartStream(ctx, instrumentID)
 
-	go c.Serialization(ctx, dataChan)
+	go c.Serialization(ctx, dataChan, ticker)
 
 	return dataChan, errChan, nil
 }
 
-func (c *Client) Serialization(ctx context.Context, dataChan chan *pb.Candle) {
+func (c *Client) Serialization(ctx context.Context, dataChan chan *pb.Candle, ticker string) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -122,13 +123,20 @@ func (c *Client) Serialization(ctx context.Context, dataChan chan *pb.Candle) {
 				return
 			}
 
-			data, err := proto.Marshal(candle)
+			if err := utils.ValidCandle(candle); err == nil {
+				c.logger.Error("invalid candle", "error", err)
+				continue
+			}
+
+			updateCandle, err := utils.MapCandle(c.logger, candle, ticker)
+
+			serData, err := proto.Marshal(updateCandle)
 			if err != nil {
 				c.logger.Error("Failed to serialize candle", "error", err)
 				continue
 			}
 
-			c.producer.Send(ctx, data)
+			c.producer.Send(ctx, serData)
 		}
 	}
 }
