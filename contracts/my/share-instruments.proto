@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package own.invest.api.contract;
+
+option go_package = "./;investapi";
+
+import "doc/google/protobuf/timestamp.proto";
+
+
+message PriceQuote {
+  int64 integer = 1;
+  int32 fractional = 2;
+}
+
+
+message CandleData {
+  string ticker = 1;
+  PriceQuote high = 2;
+  PriceQuote low = 3;
+  PriceQuote open = 4;
+  PriceQuote close = 5;
+  google.protobuf.Timestamp last_trade_ts = 6;
+}
