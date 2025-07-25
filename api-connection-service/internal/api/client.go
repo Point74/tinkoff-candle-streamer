@@ -50,7 +50,7 @@ func NewClient(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 	)
 
 	if err != nil {
-		logger.Error("Failed to connect gRPC server: %v", err)
+		logger.Error("Failed to connect gRPC server", "error", err)
 		return nil, err
 	}
 
@@ -123,7 +123,7 @@ func (c *Client) Serialization(ctx context.Context, dataChan chan *pb.Candle, ti
 				return
 			}
 
-			if err := utils.ValidCandle(candle); err == nil {
+			if err := utils.ValidCandle(candle); err != nil {
 				c.logger.Error("invalid candle", "error", err)
 				continue
 			}

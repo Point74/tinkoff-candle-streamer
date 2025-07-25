@@ -19,7 +19,7 @@ func main() {
 
 	client, err := api.NewClient(cfg, log)
 	if err != nil {
-		log.Error("Error creating client: ", err)
+		log.Error("Error creating client", "error", err)
 		os.Exit(1)
 	}
 
@@ -39,7 +39,7 @@ func main() {
 
 	dataChan, errChan, err := client.StartStream(ctx, shareUid, shareTicker)
 	if err != nil {
-		log.Error("Error starting stream: ", err)
+		log.Error("Error starting stream", "error", err)
 		os.Exit(1)
 	}
 
