@@ -111,6 +111,10 @@ func (c *Client) StartStream(ctx context.Context, instrumentID string, ticker st
 }
 
 func (c *Client) Serialization(ctx context.Context, dataChan chan *pb.Candle, ticker string) {
+	sendDataChan := make(chan []byte, 100)
+
+	go c.producer.Send(ctx, sendDataChan)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -136,7 +140,7 @@ func (c *Client) Serialization(ctx context.Context, dataChan chan *pb.Candle, ti
 				continue
 			}
 
-			c.producer.Send(ctx, serData)
+			sendDataChan <- serData
 		}
 	}
 }
