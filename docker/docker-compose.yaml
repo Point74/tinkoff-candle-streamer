@@ -11,7 +11,7 @@ services:
     environment:
       POSTGRES_PASSWORD: password
       POSTGRES_USER: user
-      POSTGRES_DB: postres
+      POSTGRES_DB: postgres
 
   kafka:
     image: bitnami/kafka:latest

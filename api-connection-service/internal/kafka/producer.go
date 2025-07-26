@@ -21,6 +21,7 @@ func NewProducer(brokers string, logger *slog.Logger) (*Producer, error) {
 
 	opts := []kgo.Opt{
 		kgo.SeedBrokers(brokers),
+		kgo.DefaultProduceTopic("tinkoff-candle"),
 	}
 
 	client, err := kgo.NewClient(opts...)
@@ -42,11 +43,36 @@ func NewProducer(brokers string, logger *slog.Logger) (*Producer, error) {
 	return &Producer{
 		client: client,
 		logger: logger,
+		topic:  "tinkoff-candle",
 	}, nil
 }
 
-func (p *Producer) Send(ctx context.Context, data []byte) {
+func (p *Producer) Send(ctx context.Context, dataChan chan []byte) {
+	for {
+		select {
+		case <-ctx.Done():
+			p.logger.Info("Producer is shutting down due to context", "data", ctx)
+			return
+		case data, ok := <-dataChan:
+			if !ok {
+				p.logger.Info("Producer data chanel is closed", "data", ok)
+			}
 
+			record := &kgo.Record{
+				Value: data,
+				Topic: p.topic,
+			}
+
+			p.client.Produce(ctx, record, func(_ *kgo.Record, err error) {
+				if err != nil {
+					fmt.Printf("record had a produce error: %v\n", err)
+				}
+				if err == nil {
+					fmt.Println("record sent")
+				}
+			})
+		}
+	}
 }
 
 func (p *Producer) Close() {
