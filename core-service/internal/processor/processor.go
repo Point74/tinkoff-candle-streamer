@@ -41,7 +41,6 @@ func (p *Processor) Deserialization(ctx context.Context, serDataCandleChan chan 
 			return
 
 		case serData := <-serDataCandleChan:
-
 			err := proto.Unmarshal(serData, &candle)
 			if err != nil {
 				p.logger.Error("Error unmarshaling data", "error", err)
