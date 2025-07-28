@@ -75,7 +75,6 @@ func (c *Consumer) Get(ctx context.Context) {
 			}
 
 			iter := fetches.RecordIter()
-			c.logger.Info("Consumer is getting data")
 			for !iter.Done() {
 				record := iter.Next()
 				recordChan <- record.Value
