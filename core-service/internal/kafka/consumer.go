@@ -50,8 +50,30 @@ func NewConsumer(brokers string, logger *slog.Logger) (*Consumer, error) {
 	}, nil
 }
 
-func (p *Consumer) Close() {
-	if p.client != nil {
-		p.client.Close()
+func (c *Consumer) Get(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			c.logger.Info("Consumer is shutting down dou to context", "data", ctx)
+			return
+		default:
+			c.logger.Info("Consumer is getting data", "data", ctx)
+			fetches := c.client.PollFetches(ctx)
+			if errs := fetches.Errors(); len(errs) > 0 {
+				c.logger.Error("Error polling fetches", "error", errs)
+			}
+
+			iter := fetches.RecordIter()
+			for !iter.Done() {
+				record := iter.Next()
+				fmt.Println(string(record.Value), "from an iterator!")
+			}
+		}
+	}
+}
+
+func (c *Consumer) Close() {
+	if c.client != nil {
+		c.client.Close()
 	}
 }
