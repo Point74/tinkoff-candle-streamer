@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"core-service/internal/processor"
 	"fmt"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"log/slog"
@@ -9,10 +10,11 @@ import (
 )
 
 type Consumer struct {
-	client *kgo.Client
-	logger *slog.Logger
-	topic  string
-	group  string
+	client    *kgo.Client
+	logger    *slog.Logger
+	topic     string
+	group     string
+	processor processor.Processor
 }
 
 func NewConsumer(brokers string, logger *slog.Logger) (*Consumer, error) {
@@ -42,22 +44,28 @@ func NewConsumer(brokers string, logger *slog.Logger) (*Consumer, error) {
 		return nil, err
 	}
 
+	proc := processor.NewProcessor(logger)
+
 	return &Consumer{
-		client: client,
-		logger: logger,
-		topic:  "tinkoff-candle",
-		group:  "consumer-group",
+		client:    client,
+		logger:    logger,
+		topic:     "tinkoff-candle",
+		group:     "consumer-group",
+		processor: *proc,
 	}, nil
 }
 
 func (c *Consumer) Get(ctx context.Context) {
+	recordChan := make(chan []byte, 100)
+	go c.processor.Deserialization(ctx, recordChan)
+
 	for {
 		select {
 		case <-ctx.Done():
 			c.logger.Info("Consumer is shutting down dou to context", "data", ctx)
 			return
 		default:
-			c.logger.Info("Consumer is getting data", "data", ctx)
+			c.logger.Info("Consumer is getting data")
 			fetches := c.client.PollFetches(ctx)
 			if errs := fetches.Errors(); len(errs) > 0 {
 				c.logger.Error("Error polling fetches", "error", errs)
@@ -66,7 +74,7 @@ func (c *Consumer) Get(ctx context.Context) {
 			iter := fetches.RecordIter()
 			for !iter.Done() {
 				record := iter.Next()
-				fmt.Println(string(record.Value), "from an iterator!")
+				recordChan <- record.Value
 			}
 		}
 	}
