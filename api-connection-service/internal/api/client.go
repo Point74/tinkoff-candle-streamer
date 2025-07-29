@@ -3,12 +3,13 @@ package api
 import (
 	"api-connection-service/internal/config"
 	"api-connection-service/internal/kafka"
-	tlsCred "api-connection-service/internal/tls"
 	"api-connection-service/internal/utils"
 	"context"
+	"crypto/tls"
 	"fmt"
 	pb "github.com/Point74/tinkoff-candle-streamer/contracts/gen/doc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/proto"
 	"log/slog"
 	"time"
@@ -39,12 +40,10 @@ func NewClient(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	creds, err := tlsCred.LoadTLSCredentials(cfg.TLS, logger)
-
 	conn, err := grpc.DialContext(
 		ctx,
 		cfg.APIHost,
-		grpc.WithTransportCredentials(creds),
+		grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})),
 		grpc.WithPerRPCCredentials(&tokenAuth{token: cfg.APIToken}),
 		grpc.WithBlock(),
 	)
