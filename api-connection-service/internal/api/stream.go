@@ -74,6 +74,7 @@ func (s *Stream) StartStream(ctx context.Context, instrumentID string) (chan *pb
 									Interval:     pb.SubscriptionInterval_SUBSCRIPTION_INTERVAL_ONE_MINUTE,
 								},
 							},
+							WaitingClose: true,
 						},
 					},
 				}
