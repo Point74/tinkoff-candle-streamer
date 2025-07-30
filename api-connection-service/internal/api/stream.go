@@ -64,6 +64,7 @@ func (s *Stream) StartStream(ctx context.Context, instrumentID string) (chan *pb
 					continue
 				}
 
+				candleSource := pb.GetCandlesRequest_CANDLE_SOURCE_UNSPECIFIED
 				request := &pb.MarketDataRequest{
 					Payload: &pb.MarketDataRequest_SubscribeCandlesRequest{
 						SubscribeCandlesRequest: &pb.SubscribeCandlesRequest{
@@ -74,7 +75,8 @@ func (s *Stream) StartStream(ctx context.Context, instrumentID string) (chan *pb
 									Interval:     pb.SubscriptionInterval_SUBSCRIPTION_INTERVAL_ONE_MINUTE,
 								},
 							},
-							WaitingClose: true,
+							CandleSourceType: &candleSource,
+							WaitingClose:     true,
 						},
 					},
 				}

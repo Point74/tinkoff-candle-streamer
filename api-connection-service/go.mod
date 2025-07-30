@@ -21,4 +21,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250715232539-7130f93afb79 // indirect
 )
 
+
 replace github.com/Point74/tinkoff-candle-streamer/contracts => ../contracts
+replace github.com/Point74/tinkoff-candle-streamer/config => ../config
