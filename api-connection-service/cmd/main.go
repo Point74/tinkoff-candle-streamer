@@ -2,9 +2,10 @@ package main
 
 import (
 	"api-connection-service/internal/api"
-	"api-connection-service/internal/config"
 	"api-connection-service/internal/logger"
 	"context"
+	"github.com/Point74/tinkoff-candle-streamer/config"
+	_ "github.com/joho/godotenv/autoload"
 	"os"
 )
 
@@ -37,7 +38,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	dataChan, errChan, err := client.StartStream(ctx, shareUid, shareTicker)
+	_, errChan, err := client.StartStream(ctx, shareUid, shareTicker)
 	if err != nil {
 		log.Error("Error starting stream", "error", err)
 		os.Exit(1)
@@ -52,14 +53,6 @@ func main() {
 			}
 
 			log.Info("Stream error: %v", err)
-
-		case data, ok := <-dataChan:
-			if !ok {
-				log.Info("Data channel closed")
-				return
-			}
-
-			log.Info("Received candle data", "data", data)
 
 		case <-ctx.Done():
 			log.Info("Context done")
