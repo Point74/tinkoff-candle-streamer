@@ -1,12 +1,12 @@
 package api
 
 import (
-	"api-connection-service/internal/config"
 	"api-connection-service/internal/kafka"
 	"api-connection-service/internal/utils"
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/Point74/tinkoff-candle-streamer/config"
 	pb "github.com/Point74/tinkoff-candle-streamer/contracts/gen/doc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
