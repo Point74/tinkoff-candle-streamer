@@ -3,8 +3,11 @@ module api-connection-service
 go 1.24.3
 
 require (
+	github.com/Point74/tinkoff-candle-streamer/config v0.0.0-00010101000000-000000000000
 	github.com/Point74/tinkoff-candle-streamer/contracts v0.0.0-00010101000000-000000000000
+	github.com/caarlos0/env/v11 v11.3.1
 	github.com/jinzhu/copier v0.4.0
+	github.com/joho/godotenv v1.5.1
 	github.com/twmb/franz-go v1.19.5
 	google.golang.org/grpc v1.73.0
 	google.golang.org/protobuf v1.36.6
@@ -21,6 +24,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250715232539-7130f93afb79 // indirect
 )
 
-
 replace github.com/Point74/tinkoff-candle-streamer/contracts => ../contracts
+
 replace github.com/Point74/tinkoff-candle-streamer/config => ../config
