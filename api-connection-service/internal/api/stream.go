@@ -22,6 +22,8 @@ func NewStream(conn *grpc.ClientConn, logger *slog.Logger) (*Stream, error) {
 		return nil, fmt.Errorf("cannot connect to MarketDataService")
 	}
 
+	logger.Info("connect to MarketDataService")
+
 	return &Stream{
 		client: client,
 		logger: logger,
@@ -105,19 +107,16 @@ func (s *Stream) StartStream(ctx context.Context, instrumentID string) (chan *pb
 					if err != nil {
 						s.logger.Error("Error receiving stream data", "error", err)
 						errChan <- fmt.Errorf("error receiving stream data")
-
 						break
 					}
 
 					if candle := resp.GetCandle(); candle != nil {
 						dataChan <- candle
+						s.logger.Info("received candle data", "candle", candle)
 					}
-
-					//dataChan <- resp.GetCandle()
 				}
 			}
 		}
-
 	}()
 
 	return dataChan, errChan
