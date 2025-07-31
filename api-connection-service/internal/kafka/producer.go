@@ -56,6 +56,7 @@ func (p *Producer) Send(ctx context.Context, dataChan chan []byte) {
 		case data, ok := <-dataChan:
 			if !ok {
 				p.logger.Info("Producer data chanel is closed", "data", ok)
+				return
 			}
 
 			record := &kgo.Record{
