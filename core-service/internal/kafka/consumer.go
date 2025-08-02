@@ -44,6 +44,8 @@ func NewConsumer(brokers string, logger *slog.Logger) (*Consumer, error) {
 		return nil, err
 	}
 
+	logger.Info("Connected to Kafka Consumer", "brokers", brokers)
+
 	proc := processor.NewProcessor(logger)
 
 	return &Consumer{
