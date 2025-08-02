@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
-	"core-service/internal/config"
+	"core-service/internal/db/postgres"
 	"core-service/internal/kafka"
 	"core-service/internal/logger"
+	"github.com/Point74/tinkoff-candle-streamer/config"
 	"os"
 )
 
@@ -26,7 +27,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	consumer.Get(ctx)
-
 	defer consumer.Close()
+
+	storage, err := postgres.New(ctx, cfg, log)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	defer storage.Close(ctx)
+
+	consumer.Get(ctx)
 }

@@ -23,3 +23,5 @@ require (
 )
 
 replace github.com/Point74/tinkoff-candle-streamer/contracts => ../contracts
+
+replace github.com/Point74/tinkoff-candle-streamer/config => ../config
