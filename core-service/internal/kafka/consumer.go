@@ -4,6 +4,7 @@ import (
 	"context"
 	"core-service/internal/processor"
 	"fmt"
+	"github.com/Point74/tinkoff-candle-streamer/config"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"log/slog"
 	"time"
@@ -17,20 +18,20 @@ type Consumer struct {
 	processor processor.Processor
 }
 
-func NewConsumer(brokers string, logger *slog.Logger) (*Consumer, error) {
-	if len(brokers) == 0 {
+func NewConsumer(cfg *config.Config, logger *slog.Logger) (*Consumer, error) {
+	if len(cfg.KafkaBroker) == 0 {
 		return nil, fmt.Errorf("no brokers provided")
 	}
 
 	opts := []kgo.Opt{
-		kgo.SeedBrokers(brokers),
+		kgo.SeedBrokers(cfg.KafkaBroker),
 		kgo.ConsumeTopics("tinkoff-candle"),
 		kgo.ConsumerGroup("consumer-group"),
 	}
 
 	client, err := kgo.NewClient(opts...)
 	if err != nil {
-		logger.Error("Error creating Kafka Consumer", "error", err, "brokers", brokers)
+		logger.Error("Error creating Kafka Consumer", "error", err, "brokers", cfg.KafkaBroker)
 		return nil, err
 	}
 
@@ -38,15 +39,15 @@ func NewConsumer(brokers string, logger *slog.Logger) (*Consumer, error) {
 	defer cancel()
 
 	if err := client.Ping(ctx); err != nil {
-		logger.Error("Error connect to Kafka Consumer", "error", err, "brokers", brokers)
+		logger.Error("Error connect to Kafka Consumer", "error", err, "brokers", cfg.KafkaBroker)
 		client.Close()
 
 		return nil, err
 	}
 
-	logger.Info("Connected to Kafka Consumer", "brokers", brokers)
+	logger.Info("Connected to Kafka Consumer", "brokers", cfg.KafkaBroker)
 
-	proc := processor.NewProcessor(logger)
+	proc := processor.NewProcessor(context.Background(), cfg, logger)
 
 	return &Consumer{
 		client:    client,
@@ -65,15 +66,16 @@ func (c *Consumer) Get(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			c.logger.Info("Consumer is shutting down dou to context", "data", ctx)
+			close(recordChan)
 			return
 		default:
-			c.logger.Info("Consumer is getting data")
 			fetches := c.client.PollFetches(ctx)
 			if errs := fetches.Errors(); len(errs) > 0 {
 				c.logger.Error("Error polling fetches", "error", errs)
 			}
 
 			iter := fetches.RecordIter()
+			c.logger.Info("Consumer is getting data")
 			for !iter.Done() {
 				record := iter.Next()
 				recordChan <- record.Value

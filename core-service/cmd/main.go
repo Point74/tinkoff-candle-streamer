@@ -21,7 +21,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	consumer, err := kafka.NewConsumer(cfg.KafkaBroker, log)
+	consumer, err := kafka.NewConsumer(cfg, log)
 	if err != nil {
 		log.Error("Error creating consumer", "error", err)
 		os.Exit(1)
