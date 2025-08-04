@@ -71,6 +71,22 @@ func runMigrations(dbUrl string) error {
 }
 
 func (s *Storage) Save(ctx context.Context, p *db.Page) error {
+	sql := `INSERT INTO candles (Ticker, High, Low, Open, Close, Last_trade_ts) VALUES ($1, $2, $3, $4, $5, $6)`
+	if _, err := s.database.Exec(
+		ctx,
+		sql,
+		p.Ticker,
+		p.High,
+		p.Low,
+		p.Open,
+		p.Close,
+		p.LastTradeTs,
+	); err != nil {
+		s.logger.Error("Unable to save candle", "error", err)
+		return err
+	}
+
+	s.logger.Info("Candle saved successfully", "ticker", p.Ticker)
 
 	return nil
 }
