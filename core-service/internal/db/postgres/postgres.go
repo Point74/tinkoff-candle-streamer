@@ -13,6 +13,10 @@ import (
 	"log/slog"
 )
 
+const (
+	migrationsPath = "internal/db/migrations"
+)
+
 type Storage struct {
 	database *pgx.Conn
 	logger   *slog.Logger
