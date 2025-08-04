@@ -6,7 +6,7 @@ import (
 )
 
 type Storage interface {
-	Save(ctx context.Context, p *Page)
+	Save(ctx context.Context, p *Page) error
 }
 
 type Page struct {
