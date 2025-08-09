@@ -3,18 +3,14 @@ package postgres
 import (
 	"context"
 	"core-service/internal/db"
-	"errors"
 	"fmt"
 	"github.com/Point74/tinkoff-candle-streamer/config"
-	"github.com/golang-migrate/migrate/v4"
+	"github.com/Point74/tinkoff-candle-streamer/prometheus/metrics"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5"
 	"log/slog"
-)
-
-const (
-	migrationsPath = "internal/db/migrations"
+	"time"
 )
 
 type Storage struct {
@@ -43,11 +39,6 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Storage
 		return nil, err
 	}
 
-	if err := runMigrations(dbUrl); err != nil {
-		logger.Error("Running migrations failed", "error", err)
-		return nil, err
-	}
-
 	logger.Info("Connected to database")
 	logger.Info("Running migrations succeeded", "url", dbUrl)
 
@@ -57,20 +48,15 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Storage
 	}, nil
 }
 
-func runMigrations(dbUrl string) error {
-	m, err := migrate.New("file://"+migrationsPath, dbUrl)
-	if err != nil {
-		return err
-	}
-
-	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return err
-	}
-
-	return nil
-}
-
 func (s *Storage) Save(ctx context.Context, p *db.Page) error {
+	start := time.Now()
+	status := "success"
+
+	defer func() {
+		metrics.SendCandlesToDBTotal.WithLabelValues("Save", status).Inc()
+		metrics.SendCandlesToDBDuration.WithLabelValues("Save", status).Observe(time.Since(start).Seconds())
+	}()
+
 	sql := `INSERT INTO candles (Ticker, High, Low, Open, Close, Last_trade_ts) VALUES ($1, $2, $3, $4, $5, $6)`
 	if _, err := s.database.Exec(
 		ctx,
@@ -82,6 +68,7 @@ func (s *Storage) Save(ctx context.Context, p *db.Page) error {
 		p.Close,
 		p.LastTradeTs,
 	); err != nil {
+		status = "error"
 		s.logger.Error("Unable to save candle", "error", err)
 		return err
 	}

@@ -2,7 +2,6 @@ package config
 
 import (
 	"github.com/caarlos0/env/v11"
-	"github.com/joho/godotenv"
 	_ "github.com/joho/godotenv/autoload"
 )
 
@@ -15,17 +14,13 @@ type Config struct {
 	PostgresDB       string `env:"POSTGRES_DB" envDefault:"postgres"`
 	PostgresPort     string `env:"POSTGRES_PORT" envDefault:"5432"`
 	PostgresHost     string `env:"POSTGRES_HOST" envDefault:"localhost"`
+	MigrationsPath   string `env:"MIGRATIONS_PATH" envDefault:"/app/core-service/internal/db"`
 }
 
 func LoadConfig() (*Config, error) {
-	if err := godotenv.Load("../docker/.env"); err != nil {
-		return nil, err
-	}
-
 	var config Config
 	if err := env.Parse(&config); err != nil {
 		return nil, err
 	}
-
 	return &config, nil
 }
