@@ -86,26 +86,4 @@ var (
 		},
 		[]string{"method", "status"},
 	)
-
-	//GrpcConnectionAttemptsTotal = promauto.NewCounterVec(
-	//	prometheus.CounterOpts{
-	//		Name: "grpc_stream_connection_attempts_total",
-	//		Help: "Total attempts to connect to the gRPC stream",
-	//	},
-	//	[]string{"instrument_uid", "status"})
-	//
-	//GrpcStreamActive = promauto.NewGaugeVec(
-	//	prometheus.GaugeOpts{
-	//		Name: "grpc_stream_active",
-	//		Help: "Indicates if a gRPC stream is active",
-	//	},
-	//	[]string{"instrument_uid"})
-	//
-	//GrpcStreamCandlesReceivedTotal = promauto.NewCounterVec(
-	//	prometheus.CounterOpts{
-	//		Name: "grpc_stream_candles_received_total",
-	//		Help: "Total number of candles received from the gRPC stream",
-	//	},
-	//	[]string{"instrument_uid"},
-	//)
 )

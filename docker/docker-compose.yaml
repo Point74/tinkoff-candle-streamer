@@ -81,7 +81,7 @@ services:
     pull_policy: build
     environment:
       API_TOKEN: ${API_TOKEN}
-      KAFKA_BROKER: kafka:9092
+      KAFKA_BROKER: kafka:9090
       POSTGRES_HOST: postgres
     ports:
       - "3001:9090"
@@ -106,7 +106,7 @@ services:
       dockerfile: core-service/Dockerfile
     pull_policy: build
     environment:
-      KAFKA_BROKER: kafka:9092
+      KAFKA_BROKER: kafka:9090
       POSTGRES_HOST: postgres
     ports:
       - "3002:9090"
@@ -148,12 +148,31 @@ services:
       - app-tier
     restart: unless-stopped
 
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    networks:
+      - app-tier
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ../grafana/provisioning/datasources/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+
 volumes:
   postgres:
   kafka:
   prometheus:
     name: prometheus
     driver: local
+  grafana-storage:
 
 networks:
   app-tier:
