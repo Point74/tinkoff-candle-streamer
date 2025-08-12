@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/Point74/tinkoff-candle-streamer/config"
 	pb "github.com/Point74/tinkoff-candle-streamer/contracts/gen/doc"
-	"github.com/Point74/tinkoff-candle-streamer/prometheus/metrics"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/proto"
@@ -74,14 +73,6 @@ func NewClient(cfg *config.Config, logger *slog.Logger) (*Client, error) {
 }
 
 func (c *Client) GetInstrumentUIDFromTickerShare(ctx context.Context, ticker string) (string, error) {
-	start := time.Now()
-
-	status := "success"
-	defer func() {
-		metrics.GrpcRequestTotal.WithLabelValues("GetInstrumentBy", status).Inc()
-		metrics.GrpcRequestDuration.WithLabelValues("GetInstrumentBy", status).Observe(time.Since(start).Seconds())
-	}()
-
 	classCode := "TQBR"
 
 	instrumentClient := pb.NewInstrumentsServiceClient(c.conn)
@@ -93,16 +84,12 @@ func (c *Client) GetInstrumentUIDFromTickerShare(ctx context.Context, ticker str
 
 	resp, err := instrumentClient.GetInstrumentBy(ctx, req)
 	if err != nil {
-		status = "error"
-
 		c.logger.Error("Failed to get instrument by ticker", "error", err)
 		return "", err
 	}
 
 	instrument := resp.GetInstrument()
 	if instrument == nil {
-		status = "not_found"
-
 		c.logger.Error("Failed to get instrument_uid by ticker", "error", err)
 		return "", err
 	}
@@ -146,18 +133,12 @@ func (c *Client) Serialization(ctx context.Context, dataChan chan *pb.Candle, ti
 
 			updateCandle, err := utils.MapCandle(c.logger, candle, ticker)
 
-			start := time.Now()
-
 			serData, err := proto.Marshal(updateCandle)
 			if err != nil {
-				metrics.SerializedCandlesDuration.WithLabelValues("Serialization", "error").Observe(time.Since(start).Seconds())
-				metrics.SerializedCandlesTotal.WithLabelValues("Serialization", "error").Inc()
 				c.logger.Error("Failed to serialize candle", "error", err)
 				continue
 			}
 
-			metrics.SerializedCandlesDuration.WithLabelValues("Serialization", "success").Observe(time.Since(start).Seconds())
-			metrics.SerializedCandlesTotal.WithLabelValues("Serialization", "success").Inc()
 			sendDataChan <- serData
 		}
 	}

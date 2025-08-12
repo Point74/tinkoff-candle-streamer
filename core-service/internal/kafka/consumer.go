@@ -5,7 +5,6 @@ import (
 	"core-service/internal/processor"
 	"fmt"
 	"github.com/Point74/tinkoff-candle-streamer/config"
-	"github.com/Point74/tinkoff-candle-streamer/prometheus/metrics"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"log/slog"
 	"time"
@@ -70,25 +69,17 @@ func (c *Consumer) Get(ctx context.Context) {
 			close(recordChan)
 			return
 		default:
-			start := time.Now()
 			fetches := c.client.PollFetches(ctx)
 			if errs := fetches.Errors(); len(errs) > 0 {
-				metrics.KafkaGetDataTotal.WithLabelValues("Get", "error").Inc()
-				metrics.KafkaFetchDuration.WithLabelValues("Get", "error").Observe(time.Since(start).Seconds())
 				c.logger.Error("Error polling fetches", "error", errs)
 				continue
 			}
 
 			iter := fetches.RecordIter()
 			for !iter.Done() {
-				startMessage := time.Now()
 				record := iter.Next()
 				recordChan <- record.Value
-				metrics.KafkaGetDataTotal.WithLabelValues("Get", "success").Inc()
-				metrics.KafkaRecordProcessingDuration.WithLabelValues("Get", "success").Observe(time.Since(startMessage).Seconds())
 			}
-
-			metrics.KafkaFetchDuration.WithLabelValues("Get", "success").Observe(time.Since(start).Seconds())
 		}
 	}
 }

@@ -136,6 +136,22 @@ services:
     volumes:
       - ../migrations:/liquibase/changelog/
 
+  postgresql-exporter:
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgresql-exporter
+    ports:
+      - "9187:9187"
+    environment:
+      DATA_SOURCE_NAME: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}/${POSTGRES_DB}?sslmode=disable"
+    depends_on:
+      prometheus:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-tier
+
   prometheus:
     image: prom/prometheus:v2.55.1
     container_name: prometheus
@@ -144,6 +160,11 @@ services:
     volumes:
       - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
     networks:
       - app-tier
     restart: unless-stopped
@@ -173,6 +194,7 @@ volumes:
     name: prometheus
     driver: local
   grafana-storage:
+  postgresql-exporter:
 
 networks:
   app-tier:

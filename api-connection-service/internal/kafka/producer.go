@@ -3,7 +3,6 @@ package kafka
 import (
 	"context"
 	"fmt"
-	"github.com/Point74/tinkoff-candle-streamer/prometheus/metrics"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"log/slog"
 	"time"
@@ -68,11 +67,9 @@ func (p *Producer) Send(ctx context.Context, dataChan chan []byte) {
 			p.client.Produce(ctx, record, func(_ *kgo.Record, err error) {
 				if err != nil {
 					fmt.Printf("record had a produce error: %v\n", err)
-					metrics.KafkaSendDataTotal.WithLabelValues("Send", "error").Inc()
 				}
 				if err == nil {
 					fmt.Println("record sent")
-					metrics.KafkaSendDataTotal.WithLabelValues("Send", "success").Inc()
 				}
 			})
 		}

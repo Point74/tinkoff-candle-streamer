@@ -5,12 +5,10 @@ import (
 	"core-service/internal/db"
 	"fmt"
 	"github.com/Point74/tinkoff-candle-streamer/config"
-	"github.com/Point74/tinkoff-candle-streamer/prometheus/metrics"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5"
 	"log/slog"
-	"time"
 )
 
 type Storage struct {
@@ -49,14 +47,6 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Storage
 }
 
 func (s *Storage) Save(ctx context.Context, p *db.Page) error {
-	start := time.Now()
-	status := "success"
-
-	defer func() {
-		metrics.SendCandlesToDBTotal.WithLabelValues("Save", status).Inc()
-		metrics.SendCandlesToDBDuration.WithLabelValues("Save", status).Observe(time.Since(start).Seconds())
-	}()
-
 	sql := `INSERT INTO candles (Ticker, High, Low, Open, Close, Last_trade_ts) VALUES ($1, $2, $3, $4, $5, $6)`
 	if _, err := s.database.Exec(
 		ctx,
@@ -68,7 +58,6 @@ func (s *Storage) Save(ctx context.Context, p *db.Page) error {
 		p.Close,
 		p.LastTradeTs,
 	); err != nil {
-		status = "error"
 		s.logger.Error("Unable to save candle", "error", err)
 		return err
 	}

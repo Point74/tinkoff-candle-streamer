@@ -6,6 +6,7 @@ import (
 	"core-service/internal/db/postgres"
 	"github.com/Point74/tinkoff-candle-streamer/config"
 	ownpb "github.com/Point74/tinkoff-candle-streamer/contracts/gen/my"
+	"github.com/Point74/tinkoff-candle-streamer/prometheus/metrics"
 	"google.golang.org/protobuf/proto"
 	"log/slog"
 	"os"
@@ -41,7 +42,6 @@ func (p *Processor) Deserialization(ctx context.Context, serDataCandleChan chan 
 			return
 
 		case serData := <-serDataCandleChan:
-
 			err := proto.Unmarshal(serData, &candle)
 			if err != nil {
 				p.logger.Error("Error unmarshaling data", "error", err)
@@ -49,6 +49,7 @@ func (p *Processor) Deserialization(ctx context.Context, serDataCandleChan chan 
 			}
 
 			p.logger.Info("Deserialized data", "candle", &candle)
+			metrics.ProcessedCandlesTotal.Inc()
 			saveChan <- &candle
 		}
 	}
