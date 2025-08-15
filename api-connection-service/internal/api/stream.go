@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	pb "github.com/Point74/tinkoff-candle-streamer/contracts/gen/doc"
+	"github.com/Point74/tinkoff-candle-streamer/prometheus/metrics"
 	"google.golang.org/grpc"
 	"log/slog"
 	"time"
@@ -113,6 +114,7 @@ func (s *Stream) StartStream(ctx context.Context, instrumentID string) (chan *pb
 					if candle := resp.GetCandle(); candle != nil {
 						dataChan <- candle
 						s.logger.Info("received candle data", "candle", candle)
+						metrics.GetCandlesTotal.Inc()
 					}
 				}
 			}

@@ -6,6 +6,8 @@ import (
 	"context"
 	"github.com/Point74/tinkoff-candle-streamer/config"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"net/http"
 	"os"
 )
 
@@ -17,6 +19,14 @@ func main() {
 		log.Error("Error loading config", err)
 		os.Exit(1)
 	}
+
+	go func() {
+		log.Info("Starting metrics server api-connection-service on :9090")
+		http.Handle("/metrics", promhttp.Handler())
+		if err := http.ListenAndServe(":9090", nil); err != nil {
+			log.Error("Error starting metrics server", err)
+		}
+	}()
 
 	client, err := api.NewClient(cfg, log)
 	if err != nil {

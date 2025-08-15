@@ -6,6 +6,8 @@ import (
 	"core-service/internal/kafka"
 	"core-service/internal/logger"
 	"github.com/Point74/tinkoff-candle-streamer/config"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"net/http"
 	"os"
 )
 
@@ -17,6 +19,14 @@ func main() {
 		log.Error("Error loading config", err)
 		os.Exit(1)
 	}
+
+	go func() {
+		log.Info("Starting metrics server core-service on :9090")
+		http.Handle("/metrics", promhttp.Handler())
+		if err := http.ListenAndServe(":9090", nil); err != nil {
+			log.Error("Error starting metrics server", err)
+		}
+	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
